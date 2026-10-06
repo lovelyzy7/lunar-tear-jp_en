@@ -1,0 +1,21 @@
+JP/EN 私服支持：日服（3.7.1）与英文服双客户端服务端适配
+
+服务端
+- cmd/lunar-tear：支持按配置区分 JP / EN 两套资源与版本信息
+- cmd/lunar-tear/grpc.go：补齐 JP 客户端会调用、上游未实现的 RPC 桩，避免请求失败导致流程中断
+- internal/service/data.go：masterdata 版本改为按文件 mtime 生成，修复客户端判定“数据过期”
+- internal/service/octo.go：条款 / 隐私页资源支持本地化（JP 与 EN 路径分离）
+- internal/service/individualpop.go、pvp.go：JP 客户端所需字段与行为对齐
+- cmd/auth-server：新增 SQEX BRIDGE 引继接口
+  （/ntv/{gameId}/{reg|update}/top、bridge_links、rebindForTransfer 等），
+  打通 JP 客户端「データ引き継ぎ」全流程：登录 → 绑定 / 转移 → 结果页展示
+- web/static：新增日文条款 / 隐私页面（terms_ja、privacy_ja）
+- Makefile：补全构建目标（build-all 覆盖 dev / auth-server / octo-cdn / lunar-tear）
+
+文档
+- docs/BUILD.md：新增多平台构建指南（Windows / Linux amd64·arm64·arm / macOS，
+  纯 Go sqlite → CGO_ENABLED=0 交叉编译，含一键脚本与打包命名）
+
+说明
+- 仅上传至 fork 仓库 lovelyzy7/lunar-tear-jp_en；不向上游提交 PR
+- 服务端已通过 go vet 全量检查并 gofmt 规范化，全部 cmd 包可编译

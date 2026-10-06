@@ -22,11 +22,8 @@ type DrawnItem struct {
 }
 
 var premiumRates = []RateTier{
-	{200, int32(model.PossessionTypeCostume), model.RaritySSRare},
-	{300, int32(model.PossessionTypeWeapon), model.RaritySSRare},
-	{500, int32(model.PossessionTypeCostume), model.RaritySRare},
-	{1000, int32(model.PossessionTypeWeapon), model.RaritySRare},
-	{8000, int32(model.PossessionTypeWeapon), model.RarityRare},
+	{1, int32(model.PossessionTypeCostume), model.RaritySSRare},
+	{1, int32(model.PossessionTypeWeapon), model.RaritySSRare},
 }
 
 func DrawPremium(bp *masterdata.BannerPool, count int, fixedRarityMin int32, fixedCount int, rateMultiplier float64) []DrawnItem {

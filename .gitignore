@@ -47,3 +47,9 @@ Thumbs.db
 
 frida/
 scripts/
+
+# Windows toolchain binaries (bundled by portable setup)
+server/*.exe
+server/*.dll
+*.exe
+*.dll

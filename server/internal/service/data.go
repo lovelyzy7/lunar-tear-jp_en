@@ -13,15 +13,24 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// masterDataBinPath is the canonical location of the encrypted master data
-// file. The mtime of this file is folded into the version string so the
-// client invalidates its cache as soon as an admin reload swaps it in.
-const masterDataBinPath = "assets/release/20240404193219.bin.e"
+// masterDataBinPath / masterDataBaseVersion 可用环境变量覆盖，便于将来
+// 多区域（EN/JP）分别配置；不配置时保持原有 EN 默认值。
+//
+//	LUNAR_MASTERDATA          主数据文件路径（默认 assets/release/20240404193219.bin.e）
+//	LUNAR_MASTERDATA_VERSION  对外返回的版本号前缀（默认 20240404193219）
+//
+// 文件 mtime 会被拼接进版本号，以便管理员替换主数据后客户端自动失效缓存。
+var (
+	masterDataBinPath     = envOr("LUNAR_MASTERDATA", "assets/release/20240404193219.bin.e")
+	masterDataBaseVersion = envOr("LUNAR_MASTERDATA_VERSION", "20240404193219")
+)
 
-// masterDataBaseVersion preserves the historical "yyyymmddHHMMSS" value the
-// client has always seen; we suffix it with the file mtime to force a
-// re-download when content changes.
-const masterDataBaseVersion = "20240404193219"
+func envOr(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
 
 type DataServiceServer struct {
 	pb.UnimplementedDataServiceServer

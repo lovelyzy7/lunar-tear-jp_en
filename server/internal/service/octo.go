@@ -89,6 +89,33 @@ func staticPageLanguage(path string) string {
 	return "unknown"
 }
 
+// serveLocalizedStaticPage 按语言返回条款/隐私页正文：
+// 优先 web/static/<kind>_<lang>.html，其次 web/static/<kind>_en.html，
+// 找不到时回退到内置英文占位页。EN 客户端看英文，JP 客户端看日文翻译。
+func (s *OctoHTTPServer) serveLocalizedStaticPage(w http.ResponseWriter, kind, title, language, version string) {
+	if language == "" || language == "unknown" {
+		language = "en"
+	}
+	candidates := []string{
+		filepath.Join(s.BaseDir, "web", "static", kind+"_"+language+".html"),
+		filepath.Join(s.BaseDir, "web", "static", kind+"_en.html"),
+	}
+	for _, p := range candidates {
+		if b, err := os.ReadFile(p); err == nil {
+			body := strings.ReplaceAll(string(b), "{{VERSION}}", version)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.WriteHeader(200)
+			w.Write([]byte(body))
+			return
+		}
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(200)
+	w.Write([]byte(renderStaticTermsPage(title, language, version)))
+}
+
 func renderStaticTermsPage(title, language, version string) string {
 	return "<html><head><title>" + title + "</title></head><body><h1>" + title +
 		"</h1><p>Language: " + language + "</p><p>Version: " + version + "</p></body></html>"
@@ -209,12 +236,12 @@ func (s *OctoHTTPServer) handleAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Master data download (should not be reached if version matches)
+	// Master data download (client requests /master-data/<version> when its
+	// cached version differs): serve the real encrypted master data file.
+	// JP/EN 共用同一份文件。
 	if strings.HasPrefix(path, "/master-data/") {
-		log.Printf("[HTTP] Master data request for path: %s — returning empty", path)
-		w.Header().Set("Content-Type", "application/octet-stream")
-		w.Header().Set("Content-Length", "0")
-		w.WriteHeader(200)
+		log.Printf("[HTTP] Master data request for path: %s — serving database.bin.e", path)
+		s.serveDatabaseBinE(w, r, path)
 		return
 	}
 
@@ -458,25 +485,21 @@ func (s *OctoHTTPServer) handleWebAPI(w http.ResponseWriter, r *http.Request, pa
 
 	if strings.Contains(path, "termsofuse") {
 		language := staticPageLanguage(path)
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.WriteHeader(200)
-		w.Write([]byte(renderStaticTermsPage("Terms of Service", language, termsVersionMarker)))
+		s.serveLocalizedStaticPage(w, "terms", "Terms of Service", language, termsVersionMarker)
 		return
 	}
 
 	if strings.Contains(path, "privacy") {
 		language := staticPageLanguage(path)
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(200)
-		w.Write([]byte(renderStaticTermsPage("Privacy Policy", language, privacyVersionMarker)))
+		s.serveLocalizedStaticPage(w, "privacy", "Privacy Policy", language, privacyVersionMarker)
 		return
 	}
 
 	if strings.Contains(path, "maintenance") {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(200)
-		w.Write([]byte(`<!DOCTYPE html><html><body></body></html>`))
+		// 维护检查页：返回 404 表示"未处于维护"。
+		// JP 客户端启动时会探测该页面，若可达(200)会被判定为维护中。
+		log.Printf("[WebAPI] maintenance probe -> 404 (not in maintenance): %s", path)
+		http.NotFound(w, r)
 		return
 	}
 

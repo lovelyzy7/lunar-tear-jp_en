@@ -1,0 +1,31 @@
+{
+  "install_dir": "E:\\NieRReincarnation\\lunar-tear\\server",
+  "channel": "source",
+  "confirmed_ip": null,
+  "patched_ip": null,
+  "server_tag": null,
+  "steps_done": {
+    "assets": true,
+    "location": true,
+    "network": true,
+    "patching": true,
+    "server": true,
+    "welcome": true
+  },
+  "network_mode": null,
+  "ports": {
+    "auth": 3000,
+    "cdn": 8080,
+    "grpc": 8003
+  },
+  "patched_ports": null,
+  "prev_server_tag": null,
+  "minimize_to_tray": null,
+  "update_cache": {
+    "checked_at_unix": 1783413563,
+    "server_latest": "v1.0.2",
+    "launcher_latest": "v1.0.2",
+    "launcher_url": "https://github.com/Daelso/lunar-launcher/releases/tag/v1.0.2",
+    "channel": "source"
+  }
+}

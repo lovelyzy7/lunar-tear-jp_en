@@ -16,6 +16,9 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/google/uuid"
+
 	pb "lunar-tear/server/gen/proto"
 	"lunar-tear/server/internal/gametime"
 	"lunar-tear/server/internal/model"
@@ -104,7 +107,7 @@ func (s *UserServiceServer) GameStart(ctx context.Context, _ *emptypb.Empty) (*p
 func (s *UserServiceServer) TransferUser(ctx context.Context, req *pb.TransferUserRequest) (*pb.TransferUserResponse, error) {
 	platform := model.ClientPlatformFromContext(ctx)
 
-	log.Printf("[UserService] TransferUser: platform=%s", platform)
+	log.Printf("[UserService] TransferUser: uuid=%s platform=%s", req.Uuid, platform)
 
 	userId, err := s.users.GetUserByUUID(req.Uuid)
 	if err != nil {
@@ -242,12 +245,36 @@ func (s *UserServiceServer) GetAndroidArgs(ctx context.Context, req *pb.GetAndro
 }
 
 func (s *UserServiceServer) GetBackupToken(ctx context.Context, req *pb.GetBackupTokenRequest) (*pb.GetBackupTokenResponse, error) {
-	userId := CurrentUserId(ctx, s.users, s.sessions)
+	clientUUID := strings.TrimSpace(req.Uuid)
+	var userId int64
+	if clientUUID != "" {
+		// 客户端会带上自己的 uuid；优先按它解析（会话可能已失效/账号刚被引继删除）
+		id, err := s.users.GetUserByUUID(clientUUID)
+		if err != nil {
+			platform := model.ClientPlatformFromContext(ctx)
+			id, err = s.users.CreateUser(clientUUID, platform)
+			if err != nil {
+				return nil, fmt.Errorf("create user for backup token: %w", err)
+			}
+			log.Printf("[UserService] GetBackupToken: created user %d for uuid=%s", id, clientUUID)
+		}
+		userId = id
+	} else {
+		userId = CurrentUserId(ctx, s.users, s.sessions)
+	}
+
 	user, err := s.users.LoadUser(userId)
 	if err != nil {
 		return &pb.GetBackupTokenResponse{BackupToken: "mock-backup-token"}, nil
 	}
-	return &pb.GetBackupTokenResponse{BackupToken: user.BackupToken}, nil
+	token := user.BackupToken
+	if token == "" || token == "mock-backup-token" {
+		// 每个账号一个唯一 backup_token，供引继桥接页（auth-server）解析账号
+		token = uuid.NewString()
+		s.users.UpdateUser(userId, func(u *store.UserState) { u.BackupToken = token })
+		log.Printf("[UserService] GetBackupToken: generated unique token for userId=%d uuid=%s", userId, clientUUID)
+	}
+	return &pb.GetBackupTokenResponse{BackupToken: token}, nil
 }
 
 func (s *UserServiceServer) CheckTransferSetting(ctx context.Context, _ *emptypb.Empty) (*pb.CheckTransferSettingResponse, error) {

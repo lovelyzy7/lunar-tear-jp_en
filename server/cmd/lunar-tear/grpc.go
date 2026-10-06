@@ -125,4 +125,6 @@ func registerServices(
 	pb.RegisterBigHuntServiceServer(srv, service.NewBigHuntServiceServer(userStore, userStore, holder))
 	pb.RegisterRewardServiceServer(srv, service.NewRewardServiceServer(userStore, userStore, holder))
 	pb.RegisterLabyrinthServiceServer(srv, service.NewLabyrinthServiceServer(userStore, userStore, holder))
+	pb.RegisterIndividualpopServiceServer(srv, service.NewIndividualpopServiceServer())
+	pb.RegisterPvpServiceServer(srv, service.NewPvpServiceServer())
 }
