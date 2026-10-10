@@ -13,6 +13,7 @@ server/dev
 server/wizard
 server/wizard-restore
 server/.wizard.json
+server/google/
 
 __pycache__/
 
